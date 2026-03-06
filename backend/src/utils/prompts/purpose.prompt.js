@@ -1,18 +1,3 @@
-const ALL_CATEGORIES = [
-  "Agriculture,Rural & Environment",
-  "Banking,Financial Services and Insurance",
-  "Business & Entrepreneurship",
-  "Education & Learning",
-  "Health & Wellness",
-  "Science, IT & Communications",
-  "Skills & Employment",
-  "Social welfare & Empowerment",
-  "Transport & Infrastructure",
-  "Utility & Sanitation",
-  "Public Safety,Law & Justice",
-  "Travel & Tourism",
-];
-
 const purposePrompt = (conversationHistory) => {
   return {
     role: "system",

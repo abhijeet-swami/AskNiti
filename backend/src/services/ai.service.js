@@ -2,7 +2,7 @@ import config from "../configs/env.config.js";
 
 const callAi = async (
   systemPrompt,
-  messages,
+  messages = [],
   jsonMode = false,
   temperature = 0.2,
 ) => {
