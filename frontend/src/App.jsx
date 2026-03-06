@@ -1,14 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Message, Bubble, LoadingDots } from './components/Message';
-import { SchemeList } from './components/SchemeCard';
 import { ChatInput } from './components/ChatInput';
-import { ProfileForm } from './components/ProfileForm';
-import { DetailPanel } from './components/DetailPanel';
-import { EligibilityPanel } from './components/EligibilityPanel';
-import { SchemeChatPanel } from './components/SchemeChatPanel';
 import { api } from './services/api';
-import { fieldLabels } from './utils/theme';
 
 const initialGreeting = (
   <div style={{ lineHeight: 1.65 }}>
@@ -19,20 +13,20 @@ const initialGreeting = (
   </div>
 );
 
+const profileQuestions = [
+  { key: 'gender', label: 'Aapka gender kya hai?', options: { '1': 'Male', '2': 'Female', '3': 'Other' } },
+  { key: 'caste', label: 'Aapka caste category kya hai?', options: { '1': 'General', '2': 'OBC', '3': 'SC', '4': 'ST' } },
+  { key: 'age', label: 'Aapki age kya hai?' },
+  { key: 'income', label: 'Aapki annual income kitni hai?', hint: 'Lakhs mein (e.g., 5 for 5 LPA)' },
+];
+
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState({
-    conversationHistory: [],
-    userProfile: {},
-    phase: 'intent',
-  });
-  
-  const [selectedScheme, setSelectedScheme] = useState(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [eligOpen, setEligOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [collectingProfile, setCollectingProfile] = useState(false);
+  const [profileAnswers, setProfileAnswers] = useState({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   
   const chatEndRef = useRef(null);
   const initialized = useRef(false);
@@ -44,14 +38,9 @@ function App() {
     }
   }, []);
 
-  const escapeHTML = (str) => {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  };
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const addUserMessage = (content) => {
     setMessages(prev => [...prev, { type: 'user', content }]);
@@ -61,18 +50,113 @@ function App() {
     setMessages(prev => [...prev, { type: 'bot', content }]);
   };
 
+  const askNextQuestion = () => {
+    if (currentQuestionIndex < profileQuestions.length) {
+      showQuestion(currentQuestionIndex);
+    } else {
+      sendProfileAnswers();
+    }
+  };
+
+  const showQuestion = (index) => {
+    if (index < profileQuestions.length) {
+      const q = profileQuestions[index];
+      let hint = q.hint || '';
+      if (q.options) {
+        hint = Object.entries(q.options).map(([k, v]) => `${k} for ${v}`).join(', ');
+      }
+      addBotMessage(
+        <div>
+          <div className="bg-[#252525] border-l-4 border-[#e8570a] p-3 rounded-r-lg text-sm text-[#e0e0e0]">
+            💬 {q.label}
+          </div>
+          {hint && <small style={{ color: '#888', display: 'block', marginTop: '4px' }}>{hint}</small>}
+        </div>
+      );
+    }
+  };
+
+  const sendProfileAnswers = async () => {
+    setLoading(true);
+    try {
+      const conversationHistory = Object.entries(profileAnswers).map(([key, value]) => ({
+        role: 'user',
+        content: `${key}: ${value}`,
+        timestamp: new Date(),
+      }));
+
+      const metadata = {
+        gender: profileAnswers.gender || null,
+        caste: profileAnswers.caste || null,
+        age: profileAnswers.age ? Number(profileAnswers.age) : null,
+      };
+
+      console.log('Sending metadata:', metadata);
+
+      const response = await api.sendMessage('', conversationHistory, { metadata });
+      const data = response.data;
+      if (data?.reply) {
+        addBotMessage(data.reply);
+      }
+      setCollectingProfile(false);
+      setProfileAnswers({});
+      setCurrentQuestionIndex(0);
+    } catch (err) {
+      addBotMessage(
+        <div className="bg-[#fee2e2] border-l-4 border-[#dc2626] p-3 rounded-r-lg text-[#7f1d1d] text-sm">
+          ❌ Error: {err.message}
+        </div>
+      );
+    }
+    setLoading(false);
+  };
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     
     const text = input.trim();
+    
+    if (collectingProfile) {
+      const currentKey = profileQuestions[currentQuestionIndex].key;
+      let answer = text;
+      
+      // Convert numeric input to actual value if options exist
+      const q = profileQuestions[currentQuestionIndex];
+      if (q.options && q.options[text]) {
+        answer = q.options[text];
+      }
+      
+      setProfileAnswers(prev => ({ ...prev, [currentKey]: answer }));
+      addUserMessage(answer);
+      setInput('');
+      
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
+      
+      if (nextIndex < profileQuestions.length) {
+        showQuestion(nextIndex);
+      } else {
+        sendProfileAnswers();
+      }
+      return;
+    }
+    
     addUserMessage(text);
     setInput('');
     setLoading(true);
 
     try {
-      const data = await api.query(text, session);
-      if (data.session) setSession(data.session);
-      handleResponse(data);
+      const response = await api.sendMessage(text);
+      const data = response.data;
+      
+      if (data?.intentReady) {
+        setCollectingProfile(true);
+        setCurrentQuestionIndex(0);
+        setProfileAnswers({});
+        showQuestion(0);
+      } else if (data?.reply) {
+        addBotMessage(data.reply);
+      }
     } catch (err) {
       addBotMessage(
         <div className="bg-[#fee2e2] border-l-4 border-[#dc2626] p-3 rounded-r-lg text-[#7f1d1d] text-sm">
@@ -81,126 +165,13 @@ function App() {
       );
     }
     setLoading(false);
-  };
-
-  const handleResponse = (data) => {
-    if (data.action === 'ask') {
-      const profile = session.userProfile || {};
-      const entries = Object.entries(profile).filter(
-        ([, v]) => v !== undefined && v !== null && v !== ''
-      );
-      let html = `<div class="bg-[#fff3ec] border-l-4 border-[#e8570a] p-3 rounded-r-lg text-sm">💬 ${escapeHTML(data.question)}</div>`;
-      if (entries.length > 0) {
-        const known = entries
-          .map(([k, v]) => `<strong>${fieldLabels[k] || k}:</strong> ${escapeHTML(String(v))}`)
-          .join(' · ');
-        html += `<div class="bg-[#eaedfa] border border-[rgba(15,31,110,0.12)] rounded-lg p-2.5 text-xs text-[#1a3499] mt-1.5">✅ ${known}</div>`;
-      }
-      addBotMessage(<div dangerouslySetInnerHTML={{ __html: html }} />);
-    } else if (data.action === 'collect_static') {
-      addBotMessage(
-        <ProfileForm
-          questions={data.questions}
-          intentSummary={data.intentSummary}
-          onSubmit={(answers) => handleProfileSubmit(answers, data.intentSummary)}
-        />
-      );
-    } else if (data.action === 'match') {
-      showMatchHeader(data.matchedSchemes?.length || 0);
-      addBotMessage(
-        <SchemeList
-          schemes={data.matchedSchemes}
-          onSelectScheme={openSchemeDetail}
-        />
-      );
-      if (data.reasoning) {
-        addBotMessage(
-          <div className="text-[#6b6880] text-xs italic pt-1">ℹ️ {data.reasoning}</div>
-        );
-      }
-      addNewSearchButton();
-    } else if (data.action === 'no-match') {
-      addBotMessage(
-        <div className="bg-[#fee2e2] border-l-4 border-[#dc2626] p-3 rounded-r-lg text-[#7f1d1d] text-sm">
-          🔍 {data.message || 'Koi matching scheme nahi mili.'}
-        </div>
-      );
-      addNewSearchButton();
-    } else {
-      addBotMessage(
-        <div className="bg-[#fee2e2] border-l-4 border-[#dc2626] p-3 rounded-r-lg text-[#7f1d1d] text-sm">
-          ⚠️ Session khatam ho gaya. Naya search karein.
-        </div>
-      );
-      addNewSearchButton();
-    }
-  };
-
-  const handleProfileSubmit = async (answers, intentSummary) => {
-    const summaryParts = Object.entries(answers)
-      .map(([k, v]) => `${fieldLabels[k] || k}: ${v}`)
-      .join(' · ');
-    addUserMessage(summaryParts);
-
-    setLoading(true);
-    try {
-      const data = await api.query(summaryParts, {
-        ...session,
-        staticAnswers: answers,
-        phase: 'static',
-      });
-      if (data.session) setSession(data.session);
-      handleResponse(data);
-    } catch (err) {
-      addBotMessage(
-        <div className="bg-[#fee2e2] border-l-4 border-[#dc2626] p-3 rounded-r-lg text-[#7f1d1d] text-sm">
-          ❌ Error: {err.message}
-        </div>
-      );
-    }
-    setLoading(false);
-  };
-
-  const showMatchHeader = (count) => {
-    if (count === 0) return;
-    const profile = session.userProfile || {};
-    const pParts = Object.entries(profile)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${fieldLabels[k] || k}: <strong>${escapeHTML(String(v))}</strong>`)
-      .join(' | ');
-    
-    addBotMessage(
-      <div className="bg-gradient-to-r from-[#0f1f6e] to-[#1a3499] text-white rounded-lg p-4 mb-1 w-full">
-        <div className="text-3xl font-extrabold text-[#e8570a]">{count}</div>
-        <div className="text-sm text-white/75">Scheme{count > 1 ? 's' : ''} mili aapke liye!</div>
-        {pParts && <div className="text-xs text-white/55 border-t border-white/12 pt-2 mt-2">{pParts}</div>}
-      </div>
-    );
-  };
-
-  const addNewSearchButton = () => {
-    addBotMessage(
-      <button
-        onClick={handleNewSearch}
-        className="block mx-auto mt-2.5 bg-[#107a0d] text-white rounded-full px-7 py-3 text-sm font-semibold hover:bg-[#0a5e08] transition-colors"
-      >
-        🔍 Naya Search Karein
-      </button>
-    );
   };
 
   const handleNewSearch = () => {
-    setSession({
-      conversationHistory: [],
-      userProfile: {},
-      phase: 'intent',
-    });
+    setCollectingProfile(false);
+    setProfileAnswers({});
+    setCurrentQuestionIndex(0);
     addBotMessage(initialGreeting);
-  };
-
-  const openSchemeDetail = (scheme) => {
-    setSelectedScheme(scheme);
-    setDetailOpen(true);
   };
 
   return (
@@ -236,28 +207,17 @@ function App() {
           onChange={setInput}
           onSend={handleSend}
           disabled={loading}
+          placeholder={collectingProfile ? 
+            profileQuestions[currentQuestionIndex]?.label || 'Type your answer...' : 
+            'Hindi ya English mein likhen...'}
         />
       </div>
 
-      <DetailPanel
-        scheme={selectedScheme}
-        isOpen={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        onOpenEligibility={() => { setDetailOpen(false); setEligOpen(true); }}
-        onOpenChat={() => { setDetailOpen(false); setChatOpen(true); }}
-      />
-
-      <EligibilityPanel
-        scheme={selectedScheme}
-        isOpen={eligOpen}
-        onClose={() => setEligOpen(false)}
-      />
-
-      <SchemeChatPanel
-        scheme={selectedScheme}
-        isOpen={chatOpen}
-        onClose={() => setChatOpen(false)}
-      />
+      {collectingProfile && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#252525] px-4 py-2 rounded-full text-xs text-[#888]">
+          {currentQuestionIndex} / {profileQuestions.length} questions answered
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import app from "./app.js";
 import dbConnect from "./configs/db.config.js";
 import config from "./configs/env.config.js";
-import Scheme from "./models/scheme.model.js";
 
 const PORT = config.port;
 
