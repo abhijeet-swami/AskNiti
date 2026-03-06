@@ -47,7 +47,7 @@ const sessionSchema = new mongoose.Schema(
     },
     stage1Report: {
       shortDescription: { type: String, default: null },
-      category: { type: String, default: null },
+      categories: [String],
       metadata: {
         age: { type: Number, default: null },
         gender: { type: String, default: null },
