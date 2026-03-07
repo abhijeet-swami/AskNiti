@@ -9,9 +9,14 @@ const processPurposeMessage = async (sessionId, userMessage) => {
   const system = purposePrompt(conversationHistory);
   const raw = await callAi(system.content, [
     { role: "user", content: userMessage },
-  ]);
+  ], true);
 
-  const data = JSON.parse(raw);
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (e) {
+    return { reply: raw, intentReady: false };
+  }
 
   if (data.nextQuestion) {
     session.conversationHistory.push(
