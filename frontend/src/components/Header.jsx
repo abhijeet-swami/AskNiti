@@ -1,27 +1,60 @@
-import { ThemeToggle } from './ThemeToggle';
-import { LanguageToggle } from './VoiceButtons';
-
-export function Header() {
+export function Header({ onThemeToggle, isDark }) {
   return (
-    <>
-      <header className="sticky top-0 z-20 bg-gradient-to-r from-[#0f1f6e] to-[#1a3499] px-4 h-[60px] flex items-center justify-between shadow-[0_3px_20px_rgba(15,31,110,0.35)]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-white font-bold text-base leading-tight">AskNiti</h1>
-            <p className="text-white/50 text-[10px] tracking-wider">GOVERNMENT SCHEME FINDER</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <LanguageToggle />
-          <ThemeToggle />
-        </div>
-      </header>
-      <div className="h-[3px] bg-gradient-to-r from-[#e8570a] via-white to-[#107a0d]" />
-    </>
+    <header
+      className="sticky top-0 z-20 px-4 h-[60px] flex items-center justify-between border-b"
+      style={{
+        backgroundColor: "var(--bg-primary)",
+        borderColor: "var(--border-color)",
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <img
+          src="https://i.pinimg.com/236x/ab/84/8e/ab848eed97e19478ca11f40b9586cb0c.jpg"
+          alt="AskNiti"
+          className="w-9 h-9 rounded-lg object-cover"
+        />
+        <h1
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          AskNiti
+        </h1>
+      </div>
+      <button
+        onClick={onThemeToggle}
+        className="p-2 rounded-lg hover:bg-black/5"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        {isDark ? (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+            />
+          </svg>
+        ) : (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+            />
+          </svg>
+        )}
+      </button>
+    </header>
   );
 }

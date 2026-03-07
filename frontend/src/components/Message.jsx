@@ -1,39 +1,19 @@
-export function Message({ type, children, avatar }) {
+export function Message({ type, children }) {
   const isUser = type === 'user';
-  
   return (
-    <div className={`flex gap-2.5 ${isUser ? 'flex-row-reverse' : ''} animate-[fadeUp_0.28s_ease]`}>
-      <div 
-        className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
-        style={{ 
-          backgroundColor: isUser ? 'var(--saffron)' : 'var(--bg-card)',
-          border: `2px solid ${isUser ? '#c44a00' : 'var(--border-color)'}`,
-          color: isUser ? '#fff' : 'var(--text-primary)'
-        }}
-      >
-        {avatar || (isUser ? 'U' : 'A')}
+    <div className={`flex gap-3 sm:gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-[fadeUp_0.3s_ease]`}>
+      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold flex-shrink-0" style={{ backgroundColor: isUser ? '#10a37f' : 'var(--bg-card)', border: isUser ? 'none' : '1px solid var(--border-color)', color: isUser ? '#fff' : 'var(--text-primary)' }}>
+        {isUser ? 'U' : 'AI'}
       </div>
-      <div className={isUser ? 'max-w-[80%]' : 'max-w-[85%]'}>
-        {children}
-      </div>
+      <div className={isUser ? 'max-w-[75%] sm:max-w-[70%]' : 'max-w-[85%]'}>{children}</div>
     </div>
   );
 }
 
 export function Bubble({ children, type }) {
   const isUser = type === 'user';
-  
   return (
-    <div 
-      className="px-4 py-3 rounded-[18px] text-[0.91rem] leading-relaxed"
-      style={{ 
-        backgroundColor: isUser ? 'var(--saffron)' : 'var(--bg-card)',
-        color: isUser ? '#fff' : 'var(--text-primary)',
-        borderBottomRightRadius: isUser ? '4px' : '18px',
-        borderBottomLeftRadius: isUser ? '18px' : '4px',
-        boxShadow: 'var(--shadow-sm, 0 2px 14px rgba(0,0,0,0.3))'
-      }}
-    >
+    <div className="px-4 py-3 rounded-2xl text-[0.95rem] leading-relaxed whitespace-pre-wrap" style={{ backgroundColor: isUser ? '#10a37f' : 'transparent', color: isUser ? '#fff' : 'var(--text-primary)' }}>
       {children}
     </div>
   );
@@ -41,16 +21,9 @@ export function Bubble({ children, type }) {
 
 export function LoadingDots() {
   return (
-    <div className="flex gap-1.5 items-center py-1">
-      {[0, 1, 2].map(i => (
-        <span 
-          key={i}
-          className="w-1.5 h-1.5 rounded-full animate-[bounce_1.2s_infinite]"
-          style={{ 
-            backgroundColor: 'var(--saffron)',
-            animationDelay: `${i * 0.2}s`
-          }}
-        />
+    <div className="flex gap-1 items-center py-2">
+      {[0, 0.2, 0.4].map((delay, i) => (
+        <span key={i} className="w-2 h-2 rounded-full animate-[bounce_1.4s_infinite_ease-in-out]" style={{ backgroundColor: '#10a37f', animationDelay: `${delay}s` }} />
       ))}
     </div>
   );
