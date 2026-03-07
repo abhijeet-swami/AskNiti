@@ -1,15 +1,34 @@
 import Session from "../models/session.model.js";
+import buildCategoryPrompt from "../utils/prompts/category.prompt.js";
+import callAi from "../services/ai.service.js";
+import { safeParseJSON } from "../utils/parseJson.util.js";
 
-const setMetaData = async (sessionId, metadata) => {
+const extractCategory = async (sessionId) => {
   const session = await Session.findById(sessionId);
 
-  session.stage1Report.metadata = {
-    age: metadata.age,
-    gender: metadata.gender,
-    caste: metadata.caste,
-  };
-  session.layer = 3;
-  await session.save();
+  const system = buildCategoryPrompt(
+    session.extractedPurpose,
+    session.userProfile.metadata,
+  );
+
+  try {
+    const raw = await callAi(system.content);
+    const data = safeParseJSON(raw);
+
+    session.stage = 2;
+    session.layer = 1;
+    session.userProfile.shortDescription = data.shortDescription;
+    session.userProfile.categories = data.categories;
+    await session.save();
+
+    return data;
+  } catch (error) {
+    console.error("Category extraction error:", error);
+    session.stage = 2;
+    session.layer = 1;
+    await session.save();
+    return { shortDescription: null, categories: [] };
+  }
 };
 
-export default setMetaData;
+export default extractCategory;

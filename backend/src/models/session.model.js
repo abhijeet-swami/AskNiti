@@ -45,23 +45,33 @@ const sessionSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    stage1Report: {
+    searchSpec: {
+      beneficiaryProfiles: [String],
+      mustHaveTags: [String],
+      niceToHaveTags: [String],
+      excludeTags: [String],
+      subCategories: [String],
+      categories: [String],
+    },
+    userProfile: {
+      who: { type: String, default: null },
       shortDescription: { type: String, default: null },
       categories: [String],
+      subCategories: [String],
       metadata: {
         age: { type: Number, default: null },
         gender: { type: String, default: null },
         caste: { type: String, default: null },
+        income: { type: Number, default: null },
+        isBpl: { type: Boolean, default: false },
+        isPwd: { type: Boolean, default: false },
+        isMinority: { type: Boolean, default: false },
       },
-    },
-    filteredSlug: {
-      type: [String],
-      default: [],
     },
     expiresAt: {
       type: Date,
+      expires: 43200,
       default: () => new Date(Date.now() + 1000 * 60 * 60 * 12),
-      index: { expires: 0 },
     },
   },
   {
@@ -70,5 +80,4 @@ const sessionSchema = new mongoose.Schema(
 );
 
 const Session = mongoose.model("Session", sessionSchema);
-
 export default Session;
