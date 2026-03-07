@@ -1,5 +1,19 @@
 const API_BASE = import.meta.env.VITE_API_URL;
 
+const sanitizeScheme = (scheme) => {
+  if (!scheme || typeof scheme !== "object") return scheme;
+  return {
+    slug: scheme.slug ?? null,
+    name: scheme.name ?? null,
+    description: scheme.description ?? null,
+    benefits: scheme.benefits ?? null,
+    howToApply: scheme.howToApply ?? null,
+    state: scheme.state ?? null,
+    category: scheme.category ?? null,
+    source: scheme.source ?? null,
+  };
+};
+
 const getSessionId = () => localStorage.getItem("x-session-id");
 const setSessionId = (id) => {
   if (id) localStorage.setItem("x-session-id", id);
@@ -63,11 +77,21 @@ export const api = {
     const headers = { "Content-Type": "application/json" };
     if (sessionId) headers["x-session-id"] = sessionId;
 
+    // Always sanitize scheme here — whether callers pass a slug string,
+    // a safe object, or accidentally pass a full React-touched object.
+    const safeScheme =
+      typeof scheme === "string" ? scheme : sanitizeScheme(scheme);
+
     const res = await fetch(`${API_BASE}/scheme/chat`, {
       method: "POST",
       headers,
       credentials: "include",
-      body: JSON.stringify({ scheme, message, history, clearHistory }),
+      body: JSON.stringify({
+        scheme: safeScheme,
+        message,
+        history,
+        clearHistory,
+      }),
     });
 
     const newSessionId = res.headers.get("x-session-id");
@@ -99,6 +123,16 @@ export const api = {
 
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     return res.json();
+  },
+
+  reset() {
+    sessionId = null;
+    serverAwake = false;
+    localStorage.removeItem("x-session-id");
+    localStorage.removeItem("userAge");
+    localStorage.removeItem("userGender");
+    localStorage.removeItem("userCaste");
+    localStorage.removeItem("userBPL");
   },
 
   async textToSpeech(text) {

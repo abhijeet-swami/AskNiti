@@ -52,8 +52,24 @@ function App() {
   const [collectingProfile, setCollectingProfile] = useState(false);
   const [profileAnswers, setProfileAnswers] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [schemes, setSchemes] = useState([]);
+  const [schemes, setSchemes] = useState(() => {
+    try {
+      const saved = localStorage.getItem("cachedSchemes");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [selectedScheme, setSelectedScheme] = useState(null);
+
+  const saveSchemes = (newSchemes) => {
+    setSchemes(newSchemes);
+    try {
+      localStorage.setItem("cachedSchemes", JSON.stringify(newSchemes));
+    } catch (e) {
+      console.warn("Could not save schemes to localStorage", e);
+    }
+  };
 
   const { speak } = useVoice();
   const { theme, toggleTheme } = useTheme();
@@ -66,6 +82,43 @@ function App() {
     if (!initialized.current) {
       initialized.current = true;
       addBotMessage(initialGreeting);
+
+      try {
+        const saved = localStorage.getItem("cachedSchemes");
+        const restored = saved ? JSON.parse(saved) : [];
+        if (restored.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              type: "bot",
+              content: (
+                <div>
+                  <div
+                    style={{
+                      color: "#10a37f",
+                      fontWeight: 600,
+                      marginBottom: "12px",
+                    }}
+                  >
+                    {restored.length} Schemes — pichli baar ke results
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {restored.slice(0, 10).map((scheme, i) => (
+                      <SchemeCard
+                        key={scheme._id || scheme.slug || i}
+                        scheme={scheme}
+                        onClick={() => openSchemeDetail(scheme)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ),
+            },
+          ]);
+        }
+      } catch (e) {
+        console.warn("Could not restore schemes", e);
+      }
     }
   }, []);
 
@@ -174,7 +227,7 @@ function App() {
       const data = response.data;
 
       if (data?.schemes && data.schemes.length > 0) {
-        setSchemes(data.schemes);
+        saveSchemes(data.schemes);
 
         addBotMessage(
           <div>
@@ -264,11 +317,11 @@ function App() {
         setCollectingProfile(true);
         setCurrentQuestionIndex(0);
         setProfileAnswers({});
-        setSchemes([]);
+        saveSchemes([]);
 
         showQuestion(0);
       } else if (data?.schemes && data.schemes.length > 0) {
-        setSchemes(data.schemes);
+        saveSchemes(data.schemes);
 
         addBotMessage(
           <div>
@@ -314,19 +367,35 @@ function App() {
     setCurrentQuestionIndex(0);
     setSelectedScheme(null);
 
-    localStorage.removeItem("x-session-id");
-    localStorage.removeItem("userAge");
-    localStorage.removeItem("userGender");
-    localStorage.removeItem("userCaste");
-    localStorage.removeItem("userBPL");
+    api.reset();
+    localStorage.removeItem("cachedSchemes");
 
     firstMessageSent.current = false;
 
     addBotMessage(initialGreeting);
   };
 
-  const openSchemeDetail = (scheme) => setSelectedScheme(scheme);
-  const closeSchemeDetail = () => setSelectedScheme(null);
+  const openSchemeDetail = (scheme) => {
+    setSelectedScheme(scheme);
+    window.history.pushState({ schemeDetail: true }, "");
+  };
+
+  const closeSchemeDetail = () => {
+    setSelectedScheme(null);
+    if (window.history.state?.schemeDetail) {
+      window.history.back();
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (selectedScheme) {
+        setSelectedScheme(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [selectedScheme]);
 
   if (selectedScheme)
     return <SchemeDetail scheme={selectedScheme} onBack={closeSchemeDetail} />;
