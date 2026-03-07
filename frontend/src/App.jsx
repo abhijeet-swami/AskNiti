@@ -2,14 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Message, Bubble, LoadingDots } from './components/Message';
 import { ChatInput } from './components/ChatInput';
+import { SchemeCard } from './components/SchemeCard';
+import { useVoice } from './context/VoiceContext';
 import { api } from './services/api';
 
 const initialGreeting = (
   <div style={{ lineHeight: 1.65 }}>
-    <strong style={{ fontFamily: "'Baloo 2', cursive", fontSize: '1.05rem' }}>🙏 Namaste!</strong><br />
+    <strong style={{ fontFamily: "'Baloo 2', cursive", fontSize: '1.05rem' }}>Namaste!</strong><br />
     Main aapko aapke liye sabse sahi <em>sarkari yojana</em> dhoondhne mein madad karunga.<br /><br />
     Batayein — <strong>aapko kis cheez ke liye scheme chahiye?</strong><br />
-    <small style={{ color: '#888' }}>Jaise: padhai ke liye loan, kisan subsidy, business shuru karna, naukri ke liye training…</small>
+    <small style={{ color: 'var(--text-muted)' }}>Jaise: padhai ke liye loan, kisan subsidy, business shuru karna, naukri ke liye training...</small>
   </div>
 );
 
@@ -27,7 +29,9 @@ function App() {
   const [collectingProfile, setCollectingProfile] = useState(false);
   const [profileAnswers, setProfileAnswers] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [schemes, setSchemes] = useState([]);
   
+  const { speak } = useVoice();
   const chatEndRef = useRef(null);
   const initialized = useRef(false);
 
@@ -65,12 +69,23 @@ function App() {
       if (q.options) {
         hint = Object.entries(q.options).map(([k, v]) => `${k} for ${v}`).join(', ');
       }
+      
+      const fullText = `${q.label} ${hint}`;
+      speak(fullText);
+      
       addBotMessage(
         <div>
-          <div className="bg-[#252525] border-l-4 border-[#e8570a] p-3 rounded-r-lg text-sm text-[#e0e0e0]">
-            💬 {q.label}
+          <div 
+            className="border-l-4 p-3 rounded-r-lg text-sm"
+            style={{ 
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--saffron)',
+              color: 'var(--text-primary)'
+            }}
+          >
+            {q.label}
           </div>
-          {hint && <small style={{ color: '#888', display: 'block', marginTop: '4px' }}>{hint}</small>}
+          {hint && <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>{hint}</small>}
         </div>
       );
     }
@@ -91,20 +106,56 @@ function App() {
         age: profileAnswers.age ? Number(profileAnswers.age) : null,
       };
 
-      console.log('Sending metadata:', metadata);
-
       const response = await api.sendMessage('', conversationHistory, { metadata });
       const data = response.data;
-      if (data?.reply) {
+      
+      if (data?.schemes && data.schemes.length > 0) {
+        setSchemes(data.schemes);
+        addBotMessage(
+          <div>
+            <div 
+              className="text-lg font-bold mb-3"
+              style={{ color: 'var(--saffron)' }}
+            >
+              {data.schemes.length} Schemes found for you
+            </div>
+            <div className="flex flex-col gap-2">
+              {data.schemes.slice(0, 10).map((scheme, i) => (
+                <SchemeCard key={scheme._id || scheme.slug || i} scheme={scheme} />
+              ))}
+            </div>
+          </div>
+        );
+      } else if (data?.reply) {
         addBotMessage(data.reply);
+      } else {
+        addBotMessage(
+          <div 
+            className="border-l-4 p-3 rounded-r-lg text-sm"
+            style={{ 
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--saffron)',
+              color: 'var(--text-primary)'
+            }}
+          >
+            No schemes found matching your criteria. Try a different query or adjust your filters.
+          </div>
+        );
       }
       setCollectingProfile(false);
       setProfileAnswers({});
       setCurrentQuestionIndex(0);
     } catch (err) {
       addBotMessage(
-        <div className="bg-[#fee2e2] border-l-4 border-[#dc2626] p-3 rounded-r-lg text-[#7f1d1d] text-sm">
-          ❌ Error: {err.message}
+        <div 
+          className="border-l-4 p-3 rounded-r-lg text-sm"
+          style={{ 
+            backgroundColor: '#fee2e2',
+            borderColor: '#dc2626',
+            color: '#7f1d1d'
+          }}
+        >
+          Error: {err.message}
         </div>
       );
     }
@@ -153,14 +204,52 @@ function App() {
         setCollectingProfile(true);
         setCurrentQuestionIndex(0);
         setProfileAnswers({});
+        setSchemes([]);
         showQuestion(0);
+      } else if (data?.schemes && data.schemes.length > 0) {
+        setSchemes(data.schemes);
+        addBotMessage(
+          <div>
+            <div 
+              className="text-lg font-bold mb-3"
+              style={{ color: 'var(--saffron)' }}
+            >
+              {data.schemes.length} Schemes found for you
+            </div>
+            <div className="flex flex-col gap-2">
+              {data.schemes.slice(0, 10).map((scheme, i) => (
+                <SchemeCard key={scheme._id || scheme.slug || i} scheme={scheme} />
+              ))}
+            </div>
+          </div>
+        );
       } else if (data?.reply) {
         addBotMessage(data.reply);
+      } else {
+        addBotMessage(
+          <div 
+            className="border-l-4 p-3 rounded-r-lg text-sm"
+            style={{ 
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--saffron)',
+              color: 'var(--text-primary)'
+            }}
+          >
+            No schemes found matching your criteria. Try a different query or adjust your filters.
+          </div>
+        );
       }
     } catch (err) {
       addBotMessage(
-        <div className="bg-[#fee2e2] border-l-4 border-[#dc2626] p-3 rounded-r-lg text-[#7f1d1d] text-sm">
-          ❌ Error: {err.message}
+        <div 
+          className="border-l-4 p-3 rounded-r-lg text-sm"
+          style={{ 
+            backgroundColor: '#fee2e2',
+            borderColor: '#dc2626',
+            color: '#7f1d1d'
+          }}
+        >
+          Error: {err.message}
         </div>
       );
     }
@@ -171,16 +260,33 @@ function App() {
     setCollectingProfile(false);
     setProfileAnswers({});
     setCurrentQuestionIndex(0);
+    setSchemes([]);
+    localStorage.removeItem('x-session-id');
     addBotMessage(initialGreeting);
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setSchemes([]);
+    setCollectingProfile(false);
+    setProfileAnswers({});
+    setCurrentQuestionIndex(0);
+    localStorage.removeItem('x-session-id');
+    window.location.reload();
+  };
+
   return (
-    <div className="min-h-screen bg-[#0f0f0f] flex flex-col">
+    <div 
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
       <Header />
       
-      <div className="flex-1 max-w-[660px] w-full mx-auto flex flex-col h-[calc(100vh-65px)]">
+      <div 
+        className="flex-1 max-w-2xl w-full mx-auto flex flex-col h-[calc(100vh-65px)]"
+      >
         <div 
-          className="flex-1 overflow-y-auto p-5 pb-3 flex flex-col gap-2.5"
+          className="flex-1 overflow-y-auto p-3 sm:p-5 pb-3 flex flex-col gap-2.5"
           style={{ scrollBehavior: 'smooth' }}
         >
           {messages.map((msg, i) => (
@@ -213,8 +319,27 @@ function App() {
         />
       </div>
 
+      {schemes.length > 0 && (
+        <button
+          onClick={handleNewChat}
+          className="fixed top-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-xs font-semibold transition-all hover:scale-105 z-10"
+          style={{ 
+            backgroundColor: 'var(--saffron)',
+            color: '#fff'
+          }}
+        >
+          + New Chat
+        </button>
+      )}
+
       {collectingProfile && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-[#252525] px-4 py-2 rounded-full text-xs text-[#888]">
+        <div 
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-xs"
+          style={{ 
+            backgroundColor: 'var(--bg-card)',
+            color: 'var(--text-muted)'
+          }}
+        >
           {currentQuestionIndex} / {profileQuestions.length} questions answered
         </div>
       )}
