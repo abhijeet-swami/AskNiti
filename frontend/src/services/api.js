@@ -1,8 +1,8 @@
-const API_BASE = '/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL;
 
-const getSessionId = () => localStorage.getItem('x-session-id');
+const getSessionId = () => localStorage.getItem("x-session-id");
 const setSessionId = (id) => {
-  if (id) localStorage.setItem('x-session-id', id);
+  if (id) localStorage.setItem("x-session-id", id);
 };
 
 let sessionId = getSessionId();
@@ -11,29 +11,29 @@ let serverAwake = false;
 export const api = {
   async wakeUp() {
     if (serverAwake) return true;
-    
+
     let attempts = 0;
     const maxAttempts = 30;
-    
+
     while (attempts < maxAttempts) {
       try {
-        const res = await fetch(`${API_BASE}/health`, { method: 'GET' });
+        const res = await fetch(`${API_BASE}/health`, { method: "GET" });
         if (res.ok) {
           serverAwake = true;
           return true;
         }
       } catch (e) {
-        // Server not ready yet
+        console.log(e.message);
       }
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 1000));
       attempts++;
     }
     return false;
   },
 
   async sendMessage(message, conversationHistory = null, extras = null) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (sessionId) headers['x-session-id'] = sessionId;
+    const headers = { "Content-Type": "application/json" };
+    if (sessionId) headers["x-session-id"] = sessionId;
 
     const body = { message };
     if (conversationHistory) body.conversationHistory = conversationHistory;
@@ -43,13 +43,13 @@ export const api = {
     }
 
     const res = await fetch(`${API_BASE}/chat/message`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify(body),
     });
 
-    const newSessionId = res.headers.get('x-session-id');
+    const newSessionId = res.headers.get("x-session-id");
     if (newSessionId) {
       sessionId = newSessionId;
       setSessionId(sessionId);
@@ -60,17 +60,17 @@ export const api = {
   },
 
   async schemeChat(scheme, message, history, clearHistory = false) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (sessionId) headers['x-session-id'] = sessionId;
+    const headers = { "Content-Type": "application/json" };
+    if (sessionId) headers["x-session-id"] = sessionId;
 
     const res = await fetch(`${API_BASE}/scheme/chat`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({ scheme, message, history, clearHistory }),
     });
 
-    const newSessionId = res.headers.get('x-session-id');
+    const newSessionId = res.headers.get("x-session-id");
     if (newSessionId) {
       sessionId = newSessionId;
       setSessionId(sessionId);
@@ -81,17 +81,17 @@ export const api = {
   },
 
   async eligibilityCheck(schemeSlug, answers) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (sessionId) headers['x-session-id'] = sessionId;
+    const headers = { "Content-Type": "application/json" };
+    if (sessionId) headers["x-session-id"] = sessionId;
 
     const res = await fetch(`${API_BASE}/eligibility-check`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({ schemeSlug, answers }),
     });
 
-    const newSessionId = res.headers.get('x-session-id');
+    const newSessionId = res.headers.get("x-session-id");
     if (newSessionId) {
       sessionId = newSessionId;
       setSessionId(sessionId);
@@ -102,17 +102,17 @@ export const api = {
   },
 
   async textToSpeech(text) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (sessionId) headers['x-session-id'] = sessionId;
+    const headers = { "Content-Type": "application/json" };
+    if (sessionId) headers["x-session-id"] = sessionId;
 
     const res = await fetch(`${API_BASE}/tts`, {
-      method: 'POST',
+      method: "POST",
       headers,
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({ text }),
     });
 
-    const newSessionId = res.headers.get('x-session-id');
+    const newSessionId = res.headers.get("x-session-id");
     if (newSessionId) {
       sessionId = newSessionId;
       setSessionId(sessionId);
