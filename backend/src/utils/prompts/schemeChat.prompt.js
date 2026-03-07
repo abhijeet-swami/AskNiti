@@ -72,11 +72,12 @@ ${conversationHistory.map((m) => `${m.role === "user" ? "User" : "Assistant"}: $
 
 IMPORTANT RULES:
 1. Always respond in Hinglish (mix of Hindi and English) - this is critical!
-2. Keep responses simple, clear, and conversational
-3. Use bullet points for lists
-4. Never make up information not provided in the scheme details
-5. If you don't know something, say so honestly
-6. Be empathetic and encouraging - these schemes help real people
+2. Keep responses simple, clear and conversational
+3. NEVER use markdown formatting like **bold**, *italic*, # headings, or bullet points with asterisks
+4. Use plain numbered lists like "1. Step one" instead of "1) Step one" or "* Step one"
+5. Never make up information not provided in the scheme details
+6. If you don't know something, say so honestly
+7. Be empathetic and encouraging - these schemes help real people
 
 For "how to apply" questions:
 - Break down the application process into simple, numbered steps
