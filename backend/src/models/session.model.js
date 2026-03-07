@@ -68,6 +68,24 @@ const sessionSchema = new mongoose.Schema(
         isMinority: { type: Boolean, default: false },
       },
     },
+    schemeChatHistory: {
+      type: [{
+        role: {
+          type: String,
+          enum: ["user", "system", "assistant"],
+          required: true,
+        },
+        content: {
+          type: String,
+          required: true,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+      }],
+      default: [],
+    },
     expiresAt: {
       type: Date,
       expires: 43200,
