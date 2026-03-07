@@ -28,6 +28,7 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [serverStarting, setServerStarting] = useState(false);
   const [collectingProfile, setCollectingProfile] = useState(false);
   const [profileAnswers, setProfileAnswers] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -38,6 +39,7 @@ function App() {
   const { theme, toggleTheme } = useTheme();
   const chatEndRef = useRef(null);
   const initialized = useRef(false);
+  const firstMessageSent = useRef(false);
 
   useEffect(() => {
     if (!initialized.current) {
@@ -62,9 +64,30 @@ function App() {
     }
   };
 
+  const ensureServerAwake = async () => {
+    if (firstMessageSent.current) return true;
+    firstMessageSent.current = true;
+    
+    setServerStarting(true);
+    addBotMessage("Server shuru ho raha hai, please wait karein...");
+    
+    const awake = await api.wakeUp();
+    
+    setServerStarting(false);
+    if (!awake) {
+      addBotMessage("Server shuru nahi ho paaya. Please thode der wait karein aur fir try karein.");
+      firstMessageSent.current = false;
+      return false;
+    }
+    return true;
+  };
+
   const sendProfileAnswers = async () => {
     setLoading(true);
     try {
+      const awake = await ensureServerAwake();
+      if (!awake) { setLoading(false); return; }
+
       const conversationHistory = Object.entries(profileAnswers).map(([key, value]) => ({ role: 'user', content: `${key}: ${value}`, timestamp: new Date() }));
       const metadata = { gender: profileAnswers.gender || null, caste: profileAnswers.caste || null, age: profileAnswers.age ? Number(profileAnswers.age) : null };
       if (metadata.age) localStorage.setItem('userAge', metadata.age);
@@ -76,7 +99,7 @@ function App() {
       
       if (data?.schemes && data.schemes.length > 0) {
         setSchemes(data.schemes);
-        addBotMessage(<div><div style={{ color: '#10a37f', fontWeight: 600, marginBottom: '12px' }}>✅ {data.schemes.length} Schemes mil gaye hain aapke liye</div><div className="flex flex-col gap-3">{data.schemes.slice(0, 10).map((scheme, i) => (<SchemeCard key={scheme._id || scheme.slug || i} scheme={scheme} onClick={() => openSchemeDetail(scheme)} />))}</div></div>);
+        addBotMessage(<div><div style={{ color: '#10a37f', fontWeight: 600, marginBottom: '12px' }}>{data.schemes.length} Schemes mil gaye hain aapke liye</div><div className="flex flex-col gap-3">{data.schemes.slice(0, 10).map((scheme, i) => (<SchemeCard key={scheme._id || scheme.slug || i} scheme={scheme} onClick={() => openSchemeDetail(scheme)} />))}</div></div>);
       } else if (data?.reply) {
         addBotMessage(data.reply);
       } else {
@@ -113,6 +136,9 @@ function App() {
     setLoading(true);
 
     try {
+      const awake = await ensureServerAwake();
+      if (!awake) { setLoading(false); return; }
+
       const response = await api.sendMessage(text);
       const data = response.data;
       
@@ -124,7 +150,7 @@ function App() {
         showQuestion(0);
       } else if (data?.schemes && data.schemes.length > 0) {
         setSchemes(data.schemes);
-        addBotMessage(<div><div style={{ color: '#10a37f', fontWeight: 600, marginBottom: '12px' }}>✅ {data.schemes.length} Schemes mil gaye hain aapke liye</div><div className="flex flex-col gap-3">{data.schemes.slice(0, 10).map((scheme, i) => (<SchemeCard key={scheme._id || scheme.slug || i} scheme={scheme} onClick={() => openSchemeDetail(scheme)} />))}</div></div>);
+        addBotMessage(<div><div style={{ color: '#10a37f', fontWeight: 600, marginBottom: '12px' }}>{data.schemes.length} Schemes mil gaye hain aapke liye</div><div className="flex flex-col gap-3">{data.schemes.slice(0, 10).map((scheme, i) => (<SchemeCard key={scheme._id || scheme.slug || i} scheme={scheme} onClick={() => openSchemeDetail(scheme)} />))}</div></div>);
       } else if (data?.reply) {
         addBotMessage(data.reply);
       } else {
@@ -146,6 +172,7 @@ function App() {
     localStorage.removeItem('userGender');
     localStorage.removeItem('userCaste');
     localStorage.removeItem('userBPL');
+    firstMessageSent.current = false;
     addBotMessage(initialGreeting);
   };
 
@@ -163,7 +190,7 @@ function App() {
           {loading && messages.length > 0 && messages[messages.length - 1]?.type === 'user' && (<Message type="bot"><LoadingDots /></Message>)}
           <div ref={chatEndRef} />
         </div>
-        <ChatInput value={input} onChange={setInput} onSend={handleSend} disabled={loading} placeholder={collectingProfile ? profileQuestions[currentQuestionIndex]?.label || 'Apna answer likhein...' : 'Sarkari schemes ke baare mein poochhein...'} />
+        <ChatInput value={input} onChange={setInput} onSend={handleSend} disabled={loading || serverStarting} placeholder={collectingProfile ? profileQuestions[currentQuestionIndex]?.label || 'Apna answer likhein...' : 'Sarkari schemes ke baare mein poochhein...'} />
       </div>
       {schemes.length > 0 && (<button onClick={handleNewChat} className="fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-sm font-medium transition-all hover:scale-105 shadow-lg" style={{ backgroundColor: '#10a37f', color: '#fff' }}>+ Naya Chat</button>)}
     </div>

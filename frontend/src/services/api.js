@@ -6,8 +6,31 @@ const setSessionId = (id) => {
 };
 
 let sessionId = getSessionId();
+let serverAwake = false;
 
 export const api = {
+  async wakeUp() {
+    if (serverAwake) return true;
+    
+    let attempts = 0;
+    const maxAttempts = 30;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const res = await fetch(`${API_BASE}/health`, { method: 'GET' });
+        if (res.ok) {
+          serverAwake = true;
+          return true;
+        }
+      } catch (e) {
+        // Server not ready yet
+      }
+      await new Promise(r => setTimeout(r, 1000));
+      attempts++;
+    }
+    return false;
+  },
+
   async sendMessage(message, conversationHistory = null, extras = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (sessionId) headers['x-session-id'] = sessionId;

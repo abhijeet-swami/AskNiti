@@ -81,7 +81,7 @@ function EligibilityModal({ scheme, onClose }) {
     setResult({
       eligible,
       verdict: eligible 
-        ? '✅ Badhai! Aap is scheme ke liye eligible lag rahe hain!'
+        ? 'Badhai! Aap is scheme ke liye eligible lag rahe hain!'
         : `Sorry, aap eligible nahi ho: ${reasons.join(', ')}`
     });
   };
