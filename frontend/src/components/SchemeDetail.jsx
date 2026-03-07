@@ -214,8 +214,9 @@ export function SchemeDetail({ scheme, onBack }) {
         .filter((m) => m.type === "user" || m.type === "bot")
         .map((m) => ({
           role: m.type === "user" ? "user" : "assistant",
-          content: m.content,
-        }));
+          content: typeof m.content === "string" ? m.content : "",
+        }))
+        .filter((m) => m.content);
       const safeScheme = {
         slug: scheme.slug,
         name: scheme.name,

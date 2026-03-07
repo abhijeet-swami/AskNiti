@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
-import { BottomSheet } from './BottomSheet';
-import { api } from '../services/api';
-import { Message, Bubble, LoadingDots } from './Message';
+import { useState, useEffect, useRef } from "react";
+import { BottomSheet } from "./BottomSheet";
+import { api } from "../services/api";
+import { Message, Bubble, LoadingDots } from "./Message";
 
 export function SchemeChatPanel({ scheme, isOpen, onClose }) {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -19,25 +19,33 @@ export function SchemeChatPanel({ scheme, isOpen, onClose }) {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
-    
-    const userMsg = { type: 'user', content: input };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
+
+    const userMsg = { type: "user", content: input };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
     setLoading(true);
 
     try {
-      const history = messages.map(m => ({ role: m.type, content: m.content }));
+      const history = messages
+        .map((m) => ({
+          role: m.type,
+          content: typeof m.content === "string" ? m.content : "",
+        }))
+        .filter((m) => m.content);
       const data = await api.schemeChat(scheme.slug, input, history);
-      
-      setMessages(prev => [...prev, { type: 'bot', content: data.response }]);
+
+      setMessages((prev) => [...prev, { type: "bot", content: data.response }]);
     } catch (err) {
-      setMessages(prev => [...prev, { type: 'bot', content: `Error: ${err.message}` }]);
+      setMessages((prev) => [
+        ...prev,
+        { type: "bot", content: `Error: ${err.message}` },
+      ]);
     }
     setLoading(false);
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleSend();
+    if (e.key === "Enter") handleSend();
   };
 
   return (
@@ -47,30 +55,30 @@ export function SchemeChatPanel({ scheme, isOpen, onClose }) {
           <div className="w-9 h-9 rounded-full bg-[#0f1f6e] flex items-center justify-center text-lg flex-shrink-0">
             🏛️
           </div>
-          <h3 className="text-[#0f1f6e] font-bold text-sm flex-1">Scheme Advisor</h3>
+          <h3 className="text-[#0f1f6e] font-bold text-sm flex-1">
+            Scheme Advisor
+          </h3>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 min-h-[200px]">
           {messages.length === 0 && (
             <Message type="bot">
-              <Bubble type="bot">
-                Ask me anything about {scheme?.name}!
-              </Bubble>
+              <Bubble type="bot">Ask me anything about {scheme?.name}!</Bubble>
             </Message>
           )}
-          
+
           {messages.map((msg, i) => (
             <Message key={i} type={msg.type}>
               <Bubble type={msg.type}>{msg.content}</Bubble>
             </Message>
           ))}
-          
+
           {loading && (
             <Message type="bot">
               <LoadingDots />
             </Message>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
@@ -88,7 +96,13 @@ export function SchemeChatPanel({ scheme, isOpen, onClose }) {
             disabled={loading || !input.trim()}
             className="w-10 h-10 rounded-full bg-[#e8570a] text-white flex items-center justify-center flex-shrink-0 hover:bg-[#c44a00] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="w-4 h-4"
+            >
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
             </svg>
