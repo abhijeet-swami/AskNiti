@@ -36,15 +36,15 @@ export const api = {
     return res.json();
   },
 
-  async schemeChat(schemeSlug, message, history) {
+  async schemeChat(scheme, message, history, clearHistory = false) {
     const headers = { 'Content-Type': 'application/json' };
     if (sessionId) headers['x-session-id'] = sessionId;
 
-    const res = await fetch(`${API_BASE}/scheme-chat`, {
+    const res = await fetch(`${API_BASE}/scheme/chat`, {
       method: 'POST',
       headers,
       credentials: 'include',
-      body: JSON.stringify({ schemeSlug, message, history }),
+      body: JSON.stringify({ scheme, message, history, clearHistory }),
     });
 
     const newSessionId = res.headers.get('x-session-id');
