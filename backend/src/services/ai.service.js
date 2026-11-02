@@ -1,4 +1,9 @@
 import config from "../configs/env.config.js";
+import { GoogleGenAI } from "@google/genai";
+
+const gemini = new GoogleGenAI({
+  apiKey: config.ai.api,
+});
 
 const callAi = async (
   systemPrompt,
@@ -6,30 +11,35 @@ const callAi = async (
   jsonMode = false,
   temperature = 0.2,
 ) => {
-  const body = {
-    model: config.ai.model,
-    messages: [{ role: "system", content: systemPrompt }, ...messages],
-    temperature,
-  };
+  try {
+    const contents = messages.map((message) => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }],
+    }));
 
-  if (jsonMode) body.response_format = { type: "json_object" };
-
-  const response = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.ai.api}`,
-        "Content-Type": "application/json",
+    const response = await gemini.models.generateContent({
+      model: config.ai.model,
+      contents,
+      config: {
+        systemInstruction: systemPrompt,
+        temperature,
+        ...(jsonMode && {
+          responseMimeType: "application/json",
+        }),
       },
-      body: JSON.stringify(body),
-    },
-  );
+    });
 
-  const result = await response.json();
-  if (!result.choices) throw new Error(JSON.stringify(result));
+    const text = response.text;
 
-  return result.choices[0].message.content;
+    if (!text) {
+      throw new Error("Gemini returned an empty response");
+    }
+
+    return text;
+  } catch (error) {
+    console.error("Gemini API Error:", error.message);
+    throw new Error(`AI service failed: ${error.message}`);
+  }
 };
 
 export default callAi;
