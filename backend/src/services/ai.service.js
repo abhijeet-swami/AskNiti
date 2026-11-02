@@ -12,10 +12,22 @@ const callAi = async (
   temperature = 0.2,
 ) => {
   try {
-    const contents = messages.map((message) => ({
-      role: message.role === "assistant" ? "model" : "user",
-      parts: [{ text: message.content }],
-    }));
+    // Always provide at least one user message
+    const contents = messages.length
+      ? messages.map((message) => ({
+          role: message.role === "assistant" ? "model" : "user",
+          parts: [{ text: message.content }],
+        }))
+      : [
+          {
+            role: "user",
+            parts: [
+              {
+                text: "Follow the system instructions and generate the requested output.",
+              },
+            ],
+          },
+        ];
 
     const response = await gemini.models.generateContent({
       model: config.ai.model,
@@ -29,13 +41,14 @@ const callAi = async (
       },
     });
 
-    const text = response.text;
+    const result = response.text;
 
-    if (!text) {
+    if (!result) {
       throw new Error("Gemini returned an empty response");
     }
 
-    return text;
+    return result;
+
   } catch (error) {
     console.error("Gemini API Error:", error.message);
     throw new Error(`AI service failed: ${error.message}`);
